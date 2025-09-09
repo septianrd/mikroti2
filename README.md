@@ -91,7 +91,21 @@ Dengan alur ini, *Queue Tree* sudah punya dasar yang jelas untuk membedakan traf
 
 ## Queue Tree dalam Studi Kasus
 Setelah trafik ditandai, barulah kita buat **Queue Tree**. Ingat: Queue Tree bekerja berdasarkan **packet mark**.  
-
+Name: Nama queue yang sedang dibuat. Nama ini hanya sebagai identifikasi queue agar mudah dikenali.
+Parent:Menentukan interface atau queue induk.
+Packet Marks:Digunakan untuk memilih paket yang sudah ditandai (mark packet) menggunakan mangle di firewall.
+Queue Type:Tipe antrean yang dipakai, misalnya default-small.
+Default ini menggunakan algoritma untuk mengatur cara paket diproses
+Priority:Menentukan prioritas dari queue ini.
+Nilai dari 1 (tertinggi) sampai 8 (terendah).
+Bucket Size:Besaran "penampungan sementara" untuk burst traffic.
+Nilainya biasanya antara 0.1 – 1. Semakin kecil, semakin ketat pengaturannya.
+Limit At: Kecepatan minimum yang dijamin.
+Max Limit: Batas maksimal bandwidth.
+Burst Limit: Kecepatan maksimum sementara saat ada bandwidth idle.
+Burst Threshold: Ambang batas agar burst bisa berjalan.
+Burst Time: Lama waktu burst bisa berlangsung.
+OK / Cancel / Apply: Untuk menyimpan atau membatalkan konfigurasi.
 Pertama, buat **inner queue (parent)**. Parent ini mewakili total bandwidth di interface. Misalnya:  
 - Parent Download di `bridge1` dengan max-limit 5 Mbps.  
 - Parent Upload di `bridge1` dengan max-limit 3 Mbps.  
