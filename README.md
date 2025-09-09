@@ -6,7 +6,7 @@ Assalamualaikum Warahmatullahi Wabarakatuh. Video tutorial ini dibuat oleh tim d
 Nomor peserta kami adalah 25030026683.
 Pada kesempatan kali ini kami akan menjelaskan tentang manajemen bandwidth menggunakan **Hierarchical Token Bucket (HTB)** pada MikroTik.  
 
-MikroTik memang menyediakan fitur Simple Queue untuk membatasi bandwidth, namun fitur ini hanya efektif jika jumlah pengguna sedikit; ketika user semakin banyak, pembagian bandwidth menjadi tidak konsisten, sulit mengatur prioritas, dan performanya menurun, sehingga pada kasus yang lebih kompleks digunakanlah HTB (Hierarchical Token Bucket) melalui queue tree, karena mampu membagi bandwidth secara adil, menetapkan prioritas trafik, serta menjaga efisiensi meski jumlah pengguna bertambah.  
+Dalam manajemen bandwidth di MikroTik, terdapat beberapa metode yang bisa digunakan. Salah satunya adalah Simple Queue, namun fitur ini hanya efektif jika jumlah pengguna sedikit; ketika user semakin banyak, pembagian bandwidth menjadi tidak konsisten, sulit mengatur prioritas, dan performanya menurun, sehingga pada kasus yang lebih kompleks digunakanlah HTB (Hierarchical Token Bucket) melalui queue tree, karena mampu membagi bandwidth secara adil, menetapkan prioritas trafik, serta menjaga efisiensi meski jumlah pengguna bertambah.  
 
 <img width="1920" height="1080" alt="Mikrotik 2" src="https://github.com/user-attachments/assets/b6a62220-0702-4959-a69d-e78f77c07adc" />
 
