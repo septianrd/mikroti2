@@ -30,9 +30,7 @@ Dengan kata lain, **Leaf Queue** berfungsi sebagai pengatur bandwidth berbasis p
 <img width="1920" height="1080" alt="Mikrotik 3" src="https://github.com/user-attachments/assets/686d01fd-8274-4b47-b848-e90adf0c838c" />
 ---
 
-<img width="1920" height="1080" alt="Mikrotik 1 - Copy" src="https://github.com/user-attachments/assets/ccdfe931-6644-4539-bd0e-d3e28db89ef1" />
 
----
 
 ## Mangle dalam Studi Kasus
 
@@ -61,7 +59,7 @@ Langkah ini kemudian diulang dengan cara yang sama untuk koneksi jurusan Elektro
 ---
 
 ## Queue Tree dalam Studi Kasus
-
+<img width="1920" height="1080" alt="Mikrotik 1 - Copy" src="https://github.com/user-attachments/assets/ccdfe931-6644-4539-bd0e-d3e28db89ef1" />
 Setelah semua trafik berhasil ditandai menggunakan **Mangle**, langkah berikutnya adalah membuat **Queue Tree**. 
 Perlu diingat bahwa Queue Tree hanya bekerja berdasarkan **packet mark** yang sudah kita buat sebelumnya. 
 Secara umum, Queue Tree memiliki beberapa parameter penting:
