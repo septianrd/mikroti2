@@ -1,23 +1,28 @@
 # Tutorial HTB (Hierarchical Token Bucket) MikroTik
-## Identitas Tim
-Video tutorial ini dibuat oleh tim dari [Nama Sekolah] dengan anggota [Nama Siswa 1] dan [Nama Siswa 2].  
-Nomor peserta kami adalah [Nomor Peserta].
-
 ---
 
 ## Prolog
-Assalamualaikum Warahmatullahi Wabarakatuh.  
+Assalamualaikum Warahmatullahi Wabarakatuh. Video tutorial ini dibuat oleh tim dari SMK Negeri 1 Cimahi dengan anggota Muhammad Haikal Al Yasir dan Septian Ramdani Solihin.  
+Nomor peserta kami adalah 25030026683.
 Pada kesempatan kali ini kami akan menjelaskan tentang manajemen bandwidth menggunakan **Hierarchical Token Bucket (HTB)** pada MikroTik.  
 
-MikroTik sebenarnya sudah menyediakan **simple queue** untuk membatasi bandwidth. Namun, simple queue memiliki keterbatasan. Ketika jumlah user banyak, simple queue menjadi tidak efisien, sulit mengatur prioritas, dan pembagian bandwidth sering tidak konsisten. Oleh karena itu kita menggunakan **HTB**.  
+MikroTik memang menyediakan fitur Simple Queue untuk membatasi bandwidth, namun fitur ini hanya efektif jika jumlah pengguna sedikit; ketika user semakin banyak, pembagian bandwidth menjadi tidak konsisten, sulit mengatur prioritas, dan performanya menurun, sehingga pada kasus yang lebih kompleks digunakanlah HTB (Hierarchical Token Bucket) melalui queue tree, karena mampu membagi bandwidth secara adil, menetapkan prioritas trafik, serta menjaga efisiensi meski jumlah pengguna bertambah.  
 
 <img width="1920" height="1080" alt="Mikrotik 2" src="https://github.com/user-attachments/assets/b6a62220-0702-4959-a69d-e78f77c07adc" />
 
 Keunggulan HTB adalah pembagian bandwidth yang lebih fleksibel karena menggunakan **hierarki**. Dalam HTB ada dua istilah penting:  
 - **Inner Queue (Parent)** → sebagai wadah utama yang berfungsi membatasi total bandwidth di interface. Parent ini tidak perlu packet mark karena fungsinya hanya menampung trafik.  
-- **Leaf Queue (Child)** → antrian anak yang menempel pada parent. Leaf queue inilah yang mengikat trafik berdasarkan packet mark, lalu membagi bandwidth sesuai aturan minimum (limit-at), maksimum (max-limit), serta prioritas (priority).  
 
-Dengan HTB, administrator bisa menjamin bandwidth minimum untuk jurusan tertentu, memberi batas maksimum agar tidak ada yang rakus, dan mengatur prioritas siapa yang didahulukan saat bandwidth penuh.
+- **Leaf Queue (Child)** → antrian anak yang ditempelkan ke parent queue. Fungsinya adalah mengikat trafik tertentu (biasanya berdasarkan packet mark) agar bisa diatur pembagian bandwidthnya. 
+
+  Dalam leaf queue ada dua parameter penting yang berhubungan dengan konsep **CIR** dan **MIR**:
+
+  * **CIR (Committed Information Rate)** → bandwidth **minimum** yang dijamin akan diberikan ke trafik tersebut. Pada konfigurasi MikroTik, ini setara dengan **limit-at**. Jadi meskipun jaringan padat, trafik ini tetap mendapat alokasi sesuai nilai CIR.
+
+  * **MIR (Maximum Information Rate)** → bandwidth **maksimum** yang boleh dipakai trafik tersebut ketika jaringan sedang longgar. Di MikroTik, ini setara dengan **max-limit**. Jadi trafik tidak bisa melebihi batas MIR meskipun kapasitas masih ada.
+
+Dengan kata lain, **Leaf Queue** berfungsi sebagai pengatur bandwidth berbasis prioritas dan batasan. CIR memastikan ada **jaminan minimum**, sementara MIR membatasi agar tidak ada trafik yang **memonopoli seluruh bandwidth**.
+
 
 ---
 
