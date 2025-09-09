@@ -28,104 +28,76 @@ Dengan kata lain, **Leaf Queue** berfungsi sebagai pengatur bandwidth berbasis p
 
 ## Studi Kasus
 <img width="1920" height="1080" alt="Mikrotik 3" src="https://github.com/user-attachments/assets/686d01fd-8274-4b47-b848-e90adf0c838c" />
-
-Mari kita ambil contoh di sebuah **SMK** yang memiliki dua jurusan:  
-- Jurusan **SIJA (Sistem Informatika Jaringan dan Aplikasi)** yang sering menggunakan internet untuk ujian online dan praktik jaringan.  
-- Jurusan **Teknik Elektronika** yang menggunakan internet lebih ringan, misalnya untuk browsing atau mencari referensi.  
-
-ISP sekolah memberikan bandwidth total **5 Mbps download** dan **3 Mbps upload**. Administrator sekolah ingin membaginya secara adil, dengan prioritas lebih untuk SIJA. Maka pembagian bandwidth diatur seperti ini:  
-- **SIJA** → Download minimum 3 Mbps (limit-at), maksimum 5 Mbps. Upload minimum 2 Mbps, maksimum 3 Mbps.  
-- **Teknik Elektronika** → Download minimum 2 Mbps, maksimum 3 Mbps. Upload minimum 1 Mbps, maksimum 2 Mbps.  
-
-Untuk memisahkan trafik, administrator memberi range IP:  
-- SIJA: `172.168.10.2 – 172.168.10.20`  
-- Elektronika: `172.168.10.21 – 172.168.10.40`  
-
 ---
 
 <img width="1920" height="1080" alt="Mikrotik 1 - Copy" src="https://github.com/user-attachments/assets/ccdfe931-6644-4539-bd0e-d3e28db89ef1" />
-
-Oke, biar lebih naratif ya. Jadi bukan cuma list konfigurasi, tapi ceritanya mengalir seolah kita lagi jelasin di depan kamera saat bikin video olimpiade MikroTik. Tetap saya jaga validitas teknisnya supaya nggak ada salah konsep. Berikut versi naratifnya:
 
 ---
 
 ## Mangle dalam Studi Kasus
 
-Langkah pertama dalam membuat *Queue Tree* adalah **memberi tanda pada trafik** menggunakan fitur **Mangle**. Kenapa perlu ditandai? Karena *Queue Tree* itu ibarat pos satpam: dia bisa mengatur kecepatan kendaraan, tapi hanya kalau tahu kendaraan itu milik siapa. Nah, Mangle inilah yang bertugas memberi stiker “ini punya SIJA” atau “ini punya Elektronika” pada setiap koneksi atau paket yang lewat. Tanpa tanda itu, *Queue Tree* tidak akan bisa membedakan dan akhirnya tidak bekerja sesuai harapan.
+Langkah pertama kita **menandai trafik** dengan membuat rule `mark-connection` di chain **prerouting** — kita pilih `prerouting` karena di situ paket ditangani sedini mungkin, sebelum ada keputusan routing, sehingga setiap koneksi baru langsung bisa dikenali sejak awal.
+Selanjutnya pada kolom **Src Address** kita isi range IP untuk jurusan SIJA, misalnya `172.168.10.2-172.168.10.5`; kolom lain seperti Dst Address, Protocol, Port atau Interface dibiarkan kosong supaya rule ini berlaku umum untuk semua trafik dari sumber itu (jangan mempersempit kecuali memang diperlukan).
 
-### Kenapa pakai **prerouting** untuk mark-connection?
+Di tab **Advanced** sebenarnya tersedia pilihan seperti address-list atau layer7, dan di tab **Extra** ada filter teknis (TTL, packet-size), namun pada kasus pembagian berdasarkan IP sederhana ini kita **tidak mengisinya** — singkatnya: fungsi ada, tapi tidak dipakai karena tidak diperlukan.
+Pada tab **Action** kita pilih **mark-connection** dan beri nama misalnya `con-sija`; opsi **Passthrough = Yes** diaktifkan supaya rule berikutnya (yang akan menandai paket) tetap diproses. Alasan mark-connection di level koneksi adalah agar semua paket yang termasuk dalam satu koneksi otomatis mewarisi label yang sama. Setelah itu ulangi prosedur yang sama untuk jurusan lain: buat rule `prerouting` baru. 
 
-Kita ingin menangkap trafik **sedini mungkin**, yaitu sebelum paket diarahkan ke chain lain dalam alur packet flow. Dengan memilih chain `prerouting`, setiap koneksi baru yang datang langsung diperiksa dan diberi label apakah dia milik SIJA atau Elektronika.
+### Mark Packet
+Setelah selesai membuat dua rule **mark-connection**, tahap berikutnya adalah membuat rule **mark-packet**. Di sini kita menggunakan chain **forward**, bukan prerouting lagi. Alasannya jelas: semua trafik yang berjalan dari LAN menuju internet maupun dari internet ke LAN selalu melewati chain forward. Jadi di titik ini kita bisa membedakan arah paket — apakah sedang upload atau download.
 
-* Kalau alamat sumbernya `172.168.10.2–172.168.10.20`, kita beri label **con-sija**.
-* Kalau alamatnya `172.168.10.21–172.168.10.40`, kita beri label **con-elektro**.
+Pada bagian **Connection Mark**, kita isi dengan label yang sudah dibuat sebelumnya, misalnya `con-sija`. Dengan begitu hanya trafik milik koneksi tersebut yang akan diproses oleh rule ini.
 
-Karena kita menandai di level koneksi, maka seluruh paket yang termasuk dalam koneksi itu akan mewarisi label yang sama. Inilah kenapa kita pilih **mark-connection** di chain prerouting.
+Kemudian kita manfaatkan kolom **In. Interface** dan **Out. Interface** untuk menentukan arah trafik:
 
-### Kenapa pakai **forward** untuk mark-packet?
+* Jika trafik berasal dari **bridge1** (LAN) menuju **wlan1** (internet), berarti ini **upload**. Action → `mark-packet`, beri nama misalnya `sija-upload`.
+* Jika trafik berasal dari **wlan1** menuju **bridge1**, berarti ini **download**. Action → `mark-packet`, beri nama `sija-download`.
 
-Setelah koneksi sudah ditandai, giliran kita menandai paket. Nah, di sinilah peran chain `forward`. Semua trafik yang berjalan dari LAN menuju internet, maupun dari internet kembali ke LAN, pasti lewat chain forward. Jadi, entah paket itu sedang upload (keluar menuju internet) atau download (masuk dari internet), jalurnya tetap akan melalui forward.
+Tab **Advanced** dan **Extra** kembali tidak perlu digunakan karena kita hanya membedakan arah trafik berdasarkan interface, bukan berdasarkan detail lain seperti address list, TTL, atau packet size.
 
-Karena itulah marking paket paling tepat dilakukan di chain forward. Di sini kita bisa lebih spesifik:
+Terakhir, pada tab **Action**, kita set **Passthrough = No**. Alasannya, setelah paket diberi tanda (packet-mark), rule ini selesai bekerja dan tidak perlu dilanjutkan ke rule lain agar tidak terjadi pelabelan ganda yang bisa mengacaukan antrian di Queue Tree.
 
-* Kalau paket berasal dari koneksi dengan label **con-sija**, maka dia bisa ditandai lagi menjadi **sija-upload** atau **sija-download**, tergantung arah interfacenya.
-* Untuk koneksi Elektronika, kita tandai menjadi **elektro-upload** atau **elektro-download**.
-
-Di bagian **Out Interface**, kita bedakan:
-
-* Kalau keluar lewat interface **wlan1** → berarti itu **upload**.
-* Kalau keluar lewat interface **bridge1** → berarti itu **download**.
-
-Terakhir, opsi **Passthrough** kita set **No**. Artinya, setelah paket diberi label, rule berhenti di situ. Ini mencegah label ganda atau tumpang tindih yang bisa bikin antrian rusak.
-
----
-
-Jadi, singkatnya:
-
-* **Prerouting → mark-connection**: supaya koneksi dari SIJA dan Elektronika langsung dapat identitas dari awal.
-* **Forward → mark-packet**: karena semua trafik internet ↔ LAN lewat forward, di sinilah kita tandai arah upload dan download dengan jelas.
-
-Dengan alur ini, *Queue Tree* sudah punya dasar yang jelas untuk membedakan trafik. Nanti tinggal kita bikin antrian (queue) sesuai labelnya.
+Langkah ini kemudian diulang dengan cara yang sama untuk koneksi jurusan Elektronika (`con-elektro`). Kita buat dua rule: satu untuk `elektro-upload`, satu lagi untuk `elektro-download`. Dengan begitu, setiap paket dari masing-masing jurusan sudah jelas arahnya dan sudah siap diatur bandwidth-nya di Queue Tree.
 
 ---
 
 ## Queue Tree dalam Studi Kasus
-Setelah trafik ditandai, barulah kita buat **Queue Tree**. Ingat: Queue Tree bekerja berdasarkan **packet mark**.  
-Name: Nama queue yang sedang dibuat. Nama ini hanya sebagai identifikasi queue agar mudah dikenali.
-Parent:Menentukan interface atau queue induk.
-Packet Marks:Digunakan untuk memilih paket yang sudah ditandai (mark packet) menggunakan mangle di firewall.
-Queue Type:Tipe antrean yang dipakai, misalnya default-small.
-Default ini menggunakan algoritma untuk mengatur cara paket diproses
-Priority:Menentukan prioritas dari queue ini.
-Nilai dari 1 (tertinggi) sampai 8 (terendah).
-Bucket Size:Besaran "penampungan sementara" untuk burst traffic.
-Nilainya biasanya antara 0.1 – 1. Semakin kecil, semakin ketat pengaturannya.
-Limit At: Kecepatan minimum yang dijamin.
-Max Limit: Batas maksimal bandwidth.
-Burst Limit: Kecepatan maksimum sementara saat ada bandwidth idle.
-Burst Threshold: Ambang batas agar burst bisa berjalan.
-Burst Time: Lama waktu burst bisa berlangsung.
-OK / Cancel / Apply: Untuk menyimpan atau membatalkan konfigurasi.
-Pertama, buat **inner queue (parent)**. Parent ini mewakili total bandwidth di interface. Misalnya:  
-- Parent Download di `bridge1` dengan max-limit 5 Mbps.  
-- Parent Upload di `bridge1` dengan max-limit 3 Mbps.  
 
-Kenapa parent tidak diberi packet mark? Karena fungsinya hanya sebagai wadah utama, bukan pembagi trafik.  
+Setelah semua trafik berhasil ditandai menggunakan **Mangle**, langkah berikutnya adalah membuat **Queue Tree**. 
+Perlu diingat bahwa Queue Tree hanya bekerja berdasarkan **packet mark** yang sudah kita buat sebelumnya. 
+Secara umum, Queue Tree memiliki beberapa parameter penting:
 
-Kedua, buat **leaf queue (child)** untuk tiap jurusan. Leaf queue inilah yang memakai packet mark dari mangle. Misalnya:  
-- SIJA Download → packet mark `sija-download`, limit-at 3M, max-limit 5M, priority 1.  
-- Elektronika Download → packet mark `elektro-download`, limit-at 2M, max-limit 3M, priority 8.  
-- SIJA Upload → packet mark `sija-upload`, limit-at 2M, max-limit 3M, priority 1.  
-- Elektronika Upload → packet mark `elektro-upload`, limit-at 1M, max-limit 2M, priority 8.  
+- **Name** → Nama queue agar mudah dikenali.
+- **Parent** → Menentukan interface atau queue induk (inner queue).
+- **Packet Mark** → Mengacu pada hasil marking di Mangle.
+- **Queue Type** → Tipe antrean (misalnya `default-small`) yang menentukan cara paket diproses.
+- **Priority** → Skala 1–8 (1 tertinggi) untuk menentukan siapa yang lebih diprioritaskan.
+- **Bucket Size** → Ukuran buffer sementara untuk burst traffic (umumnya 0.1–1).
+- **Limit At** → Bandwidth minimum yang dijamin.
+- **Max Limit** → Bandwidth maksimum yang bisa digunakan.
+- **Burst** → Parameter tambahan untuk memberi kecepatan ekstra sementara saat bandwidth tidak penuh.
+- **Statistics** → Tab untuk mengecek apakah trafik sudah masuk ke queue yang benar.
 
-### Penjelasan Parameter di Queue Tree
-- **Limit-at** → bandwidth minimum yang dijamin, jadi meski jaringan padat, jurusan tetap dapat angka ini.  
-- **Max-limit** → batas maksimum yang bisa dipakai, jika ada bandwidth tersisa.  
-- **Priority** → menentukan siapa didahulukan saat rebutan bandwidth (1 lebih tinggi dari 8).  
-- **Parent** → menempel pada inner queue agar tidak melewati batas total bandwidth ISP.  
-- **Packet Mark** → harus diisi di leaf queue karena inilah identitas trafik.  
-- **Queue Type, Bucket Size** → biasanya default, kecuali ada kebutuhan spesifik.  
-- **Statistics** → dipakai untuk mengecek apakah trafik masuk ke antrian yang benar.  
+### Langkah Pertama: Inner Queue (Parent)
+Pertama kita buat **inner queue** sebagai induk, yang berfungsi sebagai wadah total bandwidth. 
+Inner queue tidak menggunakan **packet mark** karena tugasnya hanya membatasi total kapasitas sesuai bandwidth ISP. 
+Misalnya:
+- Parent Download di **bridge1** dengan `max-limit = 5M`.
+- Parent Upload di **wlan1** dengan `max-limit = 3M`.
+
+### Langkah Kedua: Leaf Queue (Child)
+Setelah parent dibuat, kita lanjut ke **leaf queue**. Leaf queue inilah yang memakai **packet mark** dari Mangle untuk membagi bandwidth sesuai jurusan. Contohnya:
+
+- **SIJA Download** → packet mark `sija-download`, limit-at `3M`, max-limit `5M`, priority `1`.
+- **Elektronika Download** → packet mark `elektro-download`, limit-at `2M`, max-limit `3M`, priority `8`.
+- **SIJA Upload** → packet mark `sija-upload`, limit-at `2M`, max-limit `3M`, priority `1`.
+- **Elektronika Upload** → packet mark `elektro-upload`, limit-at `1M`, max-limit `2M`, priority `8`.
+
+### Kenapa Dibedakan?
+- **Parent tidak diberi packet mark** karena hanya sebagai wadah total bandwidth.  
+- **Leaf queue wajib pakai packet mark** agar trafik bisa dipisahkan sesuai jurusan.  
+- **Limit-at dan Max-limit** menjamin pembagian minimum, tetapi tetap fleksibel jika ada bandwidth tersisa.  
+- **Priority** mengatur siapa yang lebih dulu dilayani saat bandwidth padat (SIJA lebih tinggi dari Elektronika).  
+- **Statistics** akhirnya digunakan untuk memverifikasi apakah paket benar-benar masuk ke queue sesuai label yang diberikan.  
 
 ---
 
