@@ -64,16 +64,18 @@ Setelah semua trafik berhasil ditandai menggunakan **Mangle**, langkah berikutny
 Perlu diingat bahwa Queue Tree hanya bekerja berdasarkan **packet mark** yang sudah kita buat sebelumnya. 
 Secara umum, Queue Tree memiliki beberapa parameter penting:
 
-- **Name** → Nama queue agar mudah dikenali.
-- **Parent** → Menentukan interface atau queue induk (inner queue).
-- **Packet Mark** → Mengacu pada hasil marking di Mangle.
-- **Queue Type** → Tipe antrean (misalnya `default-small`) yang menentukan cara paket diproses.
-- **Priority** → Skala 1–8 (1 tertinggi) untuk menentukan siapa yang lebih diprioritaskan.
-- **Bucket Size** → Ukuran buffer sementara untuk burst traffic (umumnya 0.1–1).
-- **Limit At** → Bandwidth minimum yang dijamin.
-- **Max Limit** → Bandwidth maksimum yang bisa digunakan.
-- **Burst** → Parameter tambahan untuk memberi kecepatan ekstra sementara saat bandwidth tidak penuh.
-- **Statistics** → Tab untuk mengecek apakah trafik sudah masuk ke queue yang benar.
+- Name → Nama queue agar mudah dikenali.
+- Parent → Menentukan interface atau queue induk (inner queue).
+- Packet Mark → Mengacu pada hasil marking di Mangle, wajib diisi pada leaf queue.
+- Queue Type → Tipe antrean (misalnya default-small) yang menentukan algoritma pembagian paket.
+- Priority → Skala 1–8 (1 tertinggi) untuk menentukan siapa yang lebih diprioritaskan.
+- Bucket Size → Ukuran buffer sementara untuk burst traffic (biasanya 0.1–1, makin kecil makin ketat).
+- Limit At → Bandwidth minimum yang dijamin, meskipun jaringan padat.
+- Max Limit → Bandwidth maksimum yang boleh dipakai.
+- Burst Limit → Kecepatan tertinggi sementara, jika bandwidth tersedia.
+- Burst Threshold → Ambang rata-rata trafik; jika pemakaian di bawah angka ini, burst bisa aktif.
+- Burst Time → Lama durasi burst bisa berjalan sebelum kembali ke normal.
+- Statistics → Untuk mengecek apakah trafik benar-benar masuk ke queue yang sesuai.
 
 ### Langkah Pertama: Inner Queue (Parent)
 Pertama kita buat **inner queue** sebagai induk, yang berfungsi sebagai wadah total bandwidth. 
@@ -86,6 +88,7 @@ Misalnya:
 Setelah parent dibuat, kita lanjut ke **leaf queue**. Leaf queue inilah yang memakai **packet mark** dari Mangle untuk membagi bandwidth sesuai jurusan. Contohnya:
 
 - **SIJA Download** → packet mark `sija-download`, limit-at `3M`, max-limit `5M`, priority `1`.
+- Kenala cuman limit at dan max limit juga priority aja dalam studi kasus ini tujuannya adalah membagi bandwidth secara proporsional antar jurusan. Dengan dua parameter ini saja, pembagian minimum (Limit At) dan batas maksimum (Max Limit) sudah jelas, tanpa perlu mekanisme tambahan.
 - **Elektronika Download** → packet mark `elektro-download`, limit-at `2M`, max-limit `3M`, priority `8`.
 - **SIJA Upload** → packet mark `sija-upload`, limit-at `2M`, max-limit `3M`, priority `1`.
 - **Elektronika Upload** → packet mark `elektro-upload`, limit-at `1M`, max-limit `2M`, priority `8`.
